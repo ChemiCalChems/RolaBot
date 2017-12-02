@@ -1,11 +1,25 @@
-service mysql start
+ls -al /home/user/mysql-files
 
-if ! mysql -uroot -prootpass -e 'use roladata' > /dev/null 2>&1; then
+mkdir /home/user/mysql-files/data
+
+echo Initializing database...
+
+mysqld --no-defaults --initialize-insecure --datadir=/home/user/mysql-files/data
+
+echo Starting database...
+
+mysqld --no-defaults --datadir=/home/user/mysql-files/data --secure-file-priv="" --socket="" --port=3306 &
+
+sleep 10
+
+echo Praying to god...
+
+if ! mysql -h 127.0.0.1 --port=3306 -uroot -prootpass -e 'use roladata' > /dev/null 2>&1; then
 	echo "Could not log in to database roladata, or root password was not set... setting up the database..." 
 
-	mysqladmin -u root password rootpass
+	mysqladmin -h 127.0.0.1 --port=3306 -uroot password rootpass
 	
-	mysql -uroot -prootpass -e "create database if not exists roladata; grant all privileges on roladata.* to 'rolauser'@'localhost' identified by 'passwd'; flush privileges; 
+	mysql -h 127.0.0.1 --port=3306 -uroot -prootpass -e "create database if not exists roladata; grant all privileges on roladata.* to 'rolauser'@'localhost' identified by 'passwd'; flush privileges; 
 	create table roladata.juegos ( 
 		   id int not null auto_increment, 
 		   nombre text not null, 
@@ -30,17 +44,20 @@ if ! mysql -uroot -prootpass -e 'use roladata' > /dev/null 2>&1; then
 	);  
 	create table roladata.socios ( 
 		   id int not null auto_increment, 
-		   fecha date not null, 
-		   nombre text not null,
-		   email text not null , 
-		   dni text not null, 
-		   fisicas_o_no bool not null, 
-		   carne_expedido bool not null, 
-		   cuentas bool not null, 
+		   # fecha date not null, 
+		   # nombre text not null,
+		   # email text not null , 
+		   # dni text not null, 
+		   # fisicas_o_no bool not null, 
+		   # carne_expedido bool not null, 
+		   # cuentas bool not null,
+		   sancionado_hasta date,
 		   primary key (id) 
 	);"	
 fi
 
 /test/gestion
-
+kill $(pgrep mysqld)
+sleep 5
+echo Done!
 
