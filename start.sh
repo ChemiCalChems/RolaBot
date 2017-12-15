@@ -1,3 +1,5 @@
+echo This is a test
+
 ls -al /home/user/mysql-files
 
 mkdir /home/user/mysql-files/data
@@ -10,7 +12,7 @@ echo Starting database...
 
 mysqld --no-defaults --datadir=/home/user/mysql-files/data --secure-file-priv="" --socket="" --port=3306 &
 
-sleep 10
+sleep 2
 
 echo Praying to god...
 
@@ -32,7 +34,6 @@ if ! mysql -h 127.0.0.1 --port=3306 -uroot -prootpass -e 'use roladata' > /dev/n
 		   id_juego int not null, 
 		   id_socio int not null,
 		   fecha_prestamo date not null, 
-		   fecha_devolucion date,
 		   fecha_devolucion_max date not null, # 7 dias + fecha_prestamo
 		   primary key(num_prestamo) 
 	); 

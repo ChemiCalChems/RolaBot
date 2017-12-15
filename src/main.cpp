@@ -19,7 +19,7 @@ enum TipoJuego {
 void nuevoSocio() {
 	auto query = conn.query();
 	try {
-		query << "insert into socios (sancionado_hasta) values ('2017-11-20');";
+		query << "insert into socios () values ();";
 		query.execute();
 	}
 	catch(...) {
@@ -39,23 +39,51 @@ void nuevoJuego(std::string nombre, int tipoJuego) {
 	}
 }
 
+bool hayPrestamosVencidos(int id_socio) { //Devuelve la has liado o no
+	auto query = conn.query();
+
+	try {
+		query << "select * from prestamos where id_socio = %0q and datediff(curdate(), fecha_devolucion_max) > 0";
+		query.parse();
+		if (query.store(id_socio).num_rows() > 0) {
+			std::cout << "La liaste capo denunciado" << std::endl;
+			return true;
+		}
+	}
+	catch(...) {
+		std::cout << query.error() << std::endl;
+	}
+
+	return false;
+}
+
 void nuevoPrestamo(int id_juego, int id_socio) {
 	auto query = conn.query();
 	try {
 		//Ver si el usuario esta o no sancionado
 		query << "select sancionado_hasta from socios where id = %0q;";
 		query.parse();
-		auto sancion = query.store(id_socio)[0][0];
-		if (sancion != "NULL") {
-			std::cout << "El usuario esta sancionado hasta el dia " << sancion << std::endl;
+		auto queryResult = query.store(id_socio);
+		if (queryResult.num_rows() > 0) {
+			if (queryResult[0][0] != "NULL") {
+				auto sancion = queryResult[0][0];
+				std::cout << "El usuario esta sancionado hasta el dia " << sancion << std::endl;
+				return;
+			}
 		}
 
+		query.reset();
+
+		if(hayPrestamosVencidos(id_socio)) {
+			std::cout << "xddddd" << std::endl;
+			return;
+		}
 		
 		//Si hay una reserva activa sobre el juego que 
 		query << "select id_socio, datediff (fecha_final, curdate()) from reservas where id_juego = %0q";
 		query.parse();
 		auto reservas = query.store(id_juego);
-		
+
 		if (reservas.num_rows() > 0) {
 			if(reservas[0]["id_socio"] != std::to_string(id_socio)) {
 				int proximaReserva = reservas[0][1];
@@ -67,7 +95,7 @@ void nuevoPrestamo(int id_juego, int id_socio) {
 		}
 
 		query.reset();
-		
+	
 		query << "select 1 from prestamos where id_juego = %0q";
 		query.parse();
 		auto prestamos = query.store(id_juego);
@@ -78,7 +106,7 @@ void nuevoPrestamo(int id_juego, int id_socio) {
 
 		query.reset();
 		
-		query << "insert into prestamos (id_juego, id_socio, fecha_prestamo, fecha_devolucion_max) values (%0q, %1q, curdate(), curdate() + interval 7 day);";
+		query << "insert into prestamos (id_juego, id_socio, fecha_prestamo, fecha_devolucion_max) values (%0q, %1q, curdate(), curdate() + interval -1 day);";
 		query.parse();
 		query.execute(id_juego, id_socio);
 	}
@@ -87,17 +115,37 @@ void nuevoPrestamo(int id_juego, int id_socio) {
 	}
 }
 
-void finalizarPrestamo(int id) {
+void finalizarPrestamo(int id_juego) {
 	auto query = conn.query();
 	try {
-		query << "select 1 from prestamos where id_juego = %0q;";
+		query << "select id_socio from prestamos where id_juego = %0q;";
 		query.parse();
+		auto results = query.store(id_juego);
 		
-		if (query.store(id).num_rows() != 0) {
+		if (results.num_rows() != 0) {
+			auto id_socio = results[0]["id_socio"];
 			query.reset();
-			query << "delete from prestamos where id_juego = %0q;";
+			query << "select datediff(curdate(), fecha_devolucion_max) as retraso from prestamos where id_juego=%0q";
 			query.parse();
-			query.execute(id);
+
+			std::cout << "xd" << std::endl;
+			
+			auto retraso = query.store(id_juego)[0]["retraso"];
+			std::cout << retraso << std::endl;
+			query.reset();
+			
+			if ((int)retraso > 0) {
+				std::cout << "El juego se devolvio con un retraso de " << retraso << " dias" << '\n';
+				query << "update socios set sancionado_hasta = if(sancionado_hasta, sancionado_hasta + interval %0q day, curdate() + interval %0q day) where id = %1q";
+				query.parse();
+				query.execute((int)retraso, id_socio);
+				query.reset();
+			}
+
+			query << "delete from prestamos where id_juego = %0q";
+			query.parse();
+			query.execute(id_juego);
+			
 			std::cout << "Game returned correctly" << std::endl;
 		}
 		else {
@@ -105,6 +153,7 @@ void finalizarPrestamo(int id) {
 		}
 	}
 	catch(...) {
+		std::cout << "Hostia puta terrible" << std::endl;
 		std::cerr << query.error() << std::endl;
 	}
 }
@@ -191,15 +240,18 @@ int main(int argc, char** argv) {
 	nuevoSocio();
 	nuevoJuego("top kek", TipoJuego::verde);
 	nuevoJuego("allahu akbar", TipoJuego::rojo);
-	
-	auto r = conn.query("select * from reservas").store();
-	for (auto row: r) {
-		for (auto field : row) std::cout << std::left << std::setw(20) << field;
-		std::cout << std::endl;
-	}
+
+	std::cout << "Prestando juego" << std::endl;
 	
 	nuevoPrestamo(1, 1);
+	finalizarPrestamo(1);
+
+	auto q = conn.query();
+	q << "select sancionado_hasta from socios where id = 1";
+	std::cout << q.store()[0][0] << std::endl;
 	
+	nuevoPrestamo(2, 1);
+
 	/*auto result = conn.query("select * from juegos;").store();
 
 	for (auto row : result) {
