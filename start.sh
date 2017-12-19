@@ -25,7 +25,8 @@ if ! mysql -h 127.0.0.1 --port=3306 -uroot -prootpass -e 'use roladata' > /dev/n
 	create table roladata.juegos ( 
 		   id int not null auto_increment, 
 		   nombre text not null, 
-		   tipo_juego int not null,
+		   color_juego int not null,
+		   es_libro bool not null,
 		   defectos text, 
 		   primary key(id) 
 	); 
@@ -33,7 +34,8 @@ if ! mysql -h 127.0.0.1 --port=3306 -uroot -prootpass -e 'use roladata' > /dev/n
 		   num_prestamo int not null auto_increment,  
 		   id_juego int not null, 
 		   id_socio int not null,
-		   fecha_prestamo date not null, 
+		   fecha_prestamo date not null,
+		   fecha_devolucion date, 
 		   fecha_devolucion_max date not null, # 7 dias + fecha_prestamo
 		   primary key(num_prestamo) 
 	); 
