@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:17.10
 
 RUN  apt-get clean && apt-get update && \
 DEBIAN_FRONTEND=noninteractive apt-get install -y libmysql++3v5 mysql-server-5.7

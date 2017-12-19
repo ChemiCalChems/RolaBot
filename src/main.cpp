@@ -3,6 +3,7 @@
 #include <mysql++/mysql++.h>
 #include "Conn.hpp"
 #include "Juego.hpp"
+#include "Scheduler/Scheduler.h"
 
 enum TipoJuego {
 	verde = 0, amarillo = 1, rojo = 2 
@@ -32,7 +33,7 @@ void nuevoJuego(std::string nombre, int tipoJuego, bool es_libro) {
 	}
 }
 
-void nuevaReserva(int id_juego, int id_socio, Fecha fecha_inicio) {
+/*void nuevaReserva(int id_juego, int id_socio, Fecha fecha_inicio) {
 	auto query = conn.query();
 	try {
 		// Un juego no puede ser reservado si una reserva activa para este acaba menos de una semana antes de que la nueva reserva comience.
@@ -85,7 +86,7 @@ void nuevaReserva(int id_juego, int id_socio, Fecha fecha_inicio) {
 		std::cerr << query.error() << std::endl;
 	}
 }
-
+*/
 void finalizarReserva(int id_juego, int id_socio) {
 	auto query = conn.query();
 	try {
@@ -108,9 +109,26 @@ void finalizarReserva(int id_juego, int id_socio) {
 	}
 }
 
+void cronjobs() {
+	auto query = conn.query();
+	
+	//Eliminar sanciones vencidas
+	query << "update socios set sancionado_hasta = NULL where sancionado_hasta = curdate()";
+	query.execute();
+	query.reset();
+
+	//Borrar reservas existentes de hace 3 dias
+	query << "delete from reservas where fecha = curdate() + interval -3 day";
+	query.execute();
+	query.reset();
+}
+
 int main(int argc, char** argv) {
 	if (conn.connect("roladata", "127.0.0.1:3306", "rolauser", "passwd")) std::cout << "Connected!" << std::endl;
 
+	Bosma::Scheduler s {10};
+	s.cron("0 0 * * *", cronjobs);
+	
 	nuevoSocio();
 	nuevoJuego("top kek", TipoJuego::verde, true);
 	nuevoJuego("allahu akbar", TipoJuego::rojo, false);

@@ -6,8 +6,8 @@ set (CMAKE_CXX_FLAGS "-std=c++14 -Werror -Wall -pthread")
 
 set(SRC_FILES src/main.cpp)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 
 add_executable(gestion ${SRC_FILES})
 
