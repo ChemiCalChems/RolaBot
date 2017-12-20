@@ -118,7 +118,7 @@ void cronjobs() {
 	query.reset();
 
 	//Borrar reservas existentes de hace 3 dias
-	query << "delete from reservas where fecha = curdate() + interval -3 day";
+	query << "delete from reservas where fecha_final = curdate() + interval -3 day";
 	query.execute();
 	query.reset();
 }
